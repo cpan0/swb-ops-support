@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-import csv
+from utils import save_data
 
 class NGOScraper:
   def __init__(self):
@@ -29,7 +29,11 @@ class NGOScraper:
 
     self.countries = countries
 
-  def get_country_ngo(self, country: str):
+    print(self.countries)
+
+    return self.countries
+
+  def get_country_ngo(self, country: str) -> list:
     country = country.lower()
     if country in self.countries:
       path = country.replace(" ", "-")
@@ -40,11 +44,14 @@ class NGOScraper:
   
       while url: 
         page = requests.get(url, headers=self.header)
+        print(page)
         soup = BeautifulSoup(page.content, "html.parser")
 
         results = soup.find(id="main_content")
+        print(url)
 
         if not results:
+          print("Error: unable to retrieve at the moment")
           break
 
         postings = results.find_all("div", class_="ngo_listing_div")
@@ -68,30 +75,22 @@ class NGOScraper:
         # Find next url
         next_url = None
         pagination = results.find("ul", class_="pagination")
-        next_link = pagination.find("a", {"rel" : "next"})
-        if next_link and next_link.has_attr("href"):
-          next_url = next_link["href"]
+        if pagination:
+            next_link = pagination.find("a", {"rel" : "next"})
+            if next_link and next_link.has_attr("href"):
+                next_url = next_link["href"]
 
         url = next_url
 
-      print("Total NGOs collected:", len(data))
-      self.save_data(data, path)
+        print("Total NGOs collected:", len(data))
+        save_data(data, path)
 
     else: 
       print("Error: invalid url")
 
-  def save_data(self, data, path: str):
-    print("Saving data")
-
-    with open("data/" + path, "w", newline="") as csvfile:
-      fieldnames = ['name', 'website']
-      writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-      writer.writeheader()
-      writer.writerows(data)
-
+    return data
 
 if __name__ == "__main__":
   scraper = NGOScraper()
   scraper.get_countries()
-  print(len(scraper.countries))
-  scraper.get_country_ngo("iceland")
+  scraper.get_country_ngo("french guina")
